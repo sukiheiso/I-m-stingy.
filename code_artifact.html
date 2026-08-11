@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小氣簿幼紀錄 - 小學成績表設計</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf.js for exporting PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Google Fonts for Retro/School style -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&family=Kalam:wght@700&family=Chakra+Petch:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f3efe6;
+            font-family: 'Noto Serif TC', serif;
+            color: #2b2b2b;
+        }
+
+        .report-card {
+            background-color: #fdfbf7;
+            background-image: radial-gradient(#e5decf 1px, transparent 0);
+            background-size: 20px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12), inset 0 0 100px rgba(220,210,190,0.3);
+            border: 4px solid #3d2b1f;
+        }
+
+        .handwritten {
+            font-family: 'Kalam', 'Noto Serif TC', cursive;
+        }
+
+        .stamp {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            text-transform: uppercase;
+            font-weight: 900;
+            border: 3px double currentColor;
+            border-radius: 4px;
+            mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect x="0" y="0" width="100" height="100" fill="black" opacity="0.9"/></svg>');
+            transform: rotate(-8deg);
+        }
+
+        .stamp-red {
+            color: #c0392b;
+            border-color: #c0392b;
+            text-shadow: 0 0 1px rgba(192, 57, 43, 0.4);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1e9d8;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a89278;
+            border-radius: 4px;
+        }
+
+        /* Floating text animation for Wooden Fish */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
+        }
+        .float-text {
+            position: absolute;
+            animation: floatUp 1s ease-out forwards;
+            pointer-events: none;
+            font-weight: bold;
+            color: #d97706;
+        }
+
+        /* Deep Breathing Animation */
+        @keyframes breathAnimation {
+            0%, 100% { transform: scale(1); background-color: #fef3c7; }
+            50% { transform: scale(1.35); background-color: #fde68a; }
+        }
+        .breath-circle {
+            animation: breathAnimation 8s infinite ease-in-out;
+        }
+
+        /* Dedicated Styles for Single-Page PDF Export */
+        .pdf-single-page {
+            padding: 1.25rem !important;
+            box-shadow: none !important;
+            border-width: 3px !important;
+            width: 790px !important;
+            max-width: 100% !important;
+            font-size: 13px !important;
+            background-color: #fdfbf7 !important;
+        }
+
+        .pdf-single-page .mb-6 {
+            margin-bottom: 0.65rem !important;
+        }
+
+        .pdf-single-page .mb-4 {
+            margin-bottom: 0.4rem !important;
+        }
+
+        .pdf-single-page .pb-4 {
+            padding-bottom: 0.4rem !important;
+        }
+
+        .pdf-single-page .p-4 {
+            padding: 0.6rem !important;
+        }
+
+        .pdf-single-page .p-3 {
+            padding: 0.4rem !important;
+        }
+
+        .pdf-single-page .p-2 {
+            padding: 0.3rem !important;
+        }
+
+        .pdf-single-page #story-input {
+            height: 75px !important;
+            min-height: 75px !important;
+            font-size: 12px !important;
+            resize: none;
+        }
+
+        .pdf-single-page #swear-input {
+            height: 46px !important;
+            font-size: 12px !important;
+            resize: none;
+        }
+
+        .pdf-single-page #sig-canvas {
+            height: 65px !important;
+        }
+
+        .pdf-single-page .stamp {
+            transform: scale(0.85) rotate(-8deg) !important;
+        }
+
+        .pdf-single-page .w-24.h-24 {
+            width: 4.5rem !important;
+            height: 4.5rem !important;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white;
+                padding: 0;
+            }
+            .report-card {
+                box-shadow: none;
+                border: 2px solid #000;
+                padding: 1rem !important;
+                max-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen py-6 px-3 md:px-8 flex flex-col items-center">
+
+    <!-- Navigation / Toolbar Bar -->
+    <div class="w-full max-w-4xl mb-4 flex flex-wrap justify-between items-center gap-3 no-print bg-amber-100 p-3 rounded-xl border-2 border-amber-800/30 shadow-sm">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">📓</span>
+            <h1 class="text-lg md:text-xl font-extrabold text-amber-900" id="nav-title">唔係我小氣，只係想記底</h1>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Venting Modal Trigger -->
+            <button onclick="openVentModal()" class="bg-red-600 hover:bg-red-700 text-white text-xs md:text-sm font-bold py-2 px-3 rounded-lg shadow flex items-center gap-1 transition">
+                <i class="fa-solid fa-fire-burner"></i> <span id="btn-vent-text">即時降火區</span>
+            </button>
+
+            <!-- Sound Toggle -->
+            <button id="sound-btn" onclick="toggleSound()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs md:text-sm font-bold py-2 px-3 rounded-lg border border-amber-400 flex items-center gap-1">
+                <i class="fa-solid fa-volume-high" id="sound-icon"></i> <span id="btn-sound-text">音效: 開</span>
+            </button>
+
+            <!-- Language Switcher -->
+            <button onclick="toggleLanguage()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs md:text-sm font-bold py-2 px-3 rounded-lg shadow flex items-center gap-1">
+                <i class="fa-solid fa-globe"></i> <span id="lang-btn-text">English</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Report Card Container -->
+    <div id="report-card-container" class="report-card w-full max-w-4xl p-4 md:p-6 rounded-lg relative overflow-hidden transition-all">
+        
+        <!-- Retro Stamp Effect overlay -->
+        <div class="absolute top-5 right-5 opacity-80 pointer-events-none hidden sm:block">
+            <div class="stamp stamp-red text-center">
+                <div class="text-xs">ROYAL PETTY SCHOOL</div>
+                <div class="text-lg font-black" id="stamp-main-text">大過處分</div>
+                <div class="text-[10px]" id="stamp-sub-text">記仇檔案存檔</div>
+            </div>
+        </div>
+
+        <!-- School Header -->
+        <div class="text-center border-b-4 border-double border-amber-900 pb-3 mb-4">
+            <div class="flex justify-center items-center gap-3 mb-1">
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-900 text-amber-100 flex items-center justify-center font-black text-xl border-2 border-amber-700">
+                    小
+                </div>
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-black tracking-wide text-amber-950" id="school-title">皇家記仇小學</h2>
+                    <p class="text-[11px] md:text-xs text-amber-800 font-serif tracking-widest" id="school-subtitle">ROYAL PETTY ELEMENTARY SCHOOL - OFFENSE REPORT CARD</p>
+                </div>
+            </div>
+            <div class="mt-2 text-xs font-bold text-amber-900 flex justify-center gap-4 flex-wrap">
+                <span><i class="fa-regular fa-calendar-check mr-1"></i><span id="label-term">學期：第一學期 (得罪紀錄)</span></span>
+                <span><i class="fa-solid fa-graduation-cap mr-1"></i><span id="label-class">班別：小氣極致班</span></span>
+                <span><i class="fa-solid fa-hashtag mr-1"></i><span id="label-doc-no">檔案編號：GRUDGE-#<span id="doc-id">9999</span></span></span>
+            </div>
+        </div>
+
+        <!-- Form Content -->
+        <form id="grudge-form" onsubmit="event.preventDefault();">
+            
+            <!-- Section 1: Target Profile -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 bg-amber-50/60 p-3 rounded-lg border border-amber-200">
+                <!-- Avatar Placeholder -->
+                <div class="flex flex-col items-center justify-center border-2 border-dashed border-amber-800/40 rounded-lg p-2 bg-white/50 relative">
+                    <img id="avatar-preview" src="https://placehold.co/120x120/e2e8f0/475569?text=罪人頭像" alt="Offender Avatar" class="w-20 h-20 md:w-24 md:h-24 object-cover rounded-md border border-slate-300 mb-1">
+                    <label class="cursor-pointer text-[11px] bg-amber-800 text-white px-2 py-0.5 rounded hover:bg-amber-900 transition no-print">
+                        <i class="fa-solid fa-upload mr-1"></i><span id="btn-upload-photo">上載相片</span>
+                        <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                    </label>
+                    <span class="text-[10px] text-gray-500 mt-0.5" id="avatar-hint">可上載得罪者相片</span>
+                </div>
+
+                <!-- Info Fields -->
+                <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    <div>
+                        <label class="block font-bold text-amber-950 mb-1" id="lbl-reporter"><i class="fa-solid fa-user-pen text-amber-800 mr-1"></i>填表人英文名 (轉換檔案編號):</label>
+                        <input type="text" id="reporter-name" placeholder="例如: Alex / Mary" oninput="updateReporterDetails()" class="w-full p-1.5 bg-white border border-amber-300 rounded focus:ring-2 focus:ring-amber-700 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-amber-950 mb-1" id="lbl-offender"><i class="fa-solid fa-user text-red-700 mr-1"></i>主角 (得罪者姓名):</label>
+                        <input type="text" id="offender-name" placeholder="例如：陳大文 / 上司 / 男朋友" class="w-full p-1.5 bg-white border border-amber-300 rounded focus:ring-2 focus:ring-amber-700 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-amber-950 mb-1" id="lbl-relation"><i class="fa-solid fa-people-arrows text-amber-700 mr-1"></i>關係:</label>
+                        <select id="offender-relation" class="w-full p-1.5 bg-white border border-amber-300 rounded focus:ring-2 focus:ring-amber-700 outline-none">
+                            <option value="伴侶 / 第一半">伴侶 / 男女人仔</option>
+                            <option value="好朋友 / 閨蜜">好朋友 / 閨蜜 / 死黨</option>
+                            <option value="同事 / 腦細">同事 / 腦細 (Boss)</option>
+                            <option value="家人 / 親戚">家人 / 親戚</option>
+                            <option value="路人 / 陌生人">路人 / 陌生人</option>
+                            <option value="自己">自己 (自討苦吃)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-amber-950 mb-1" id="lbl-date"><i class="fa-solid fa-calendar text-amber-700 mr-1"></i>日期:</label>
+                        <input type="date" id="offense-date" class="w-full p-1.5 bg-white border border-amber-300 rounded focus:ring-2 focus:ring-amber-700 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-amber-950 mb-1" id="lbl-time"><i class="fa-solid fa-clock text-amber-700 mr-1"></i>時間 & 地點:</label>
+                        <div class="flex gap-1">
+                            <input type="time" id="offense-time" class="w-1/2 p-1.5 bg-white border border-amber-300 rounded focus:ring-2 focus:ring-amber-700 outline-none">
+                            <input type="text" id="offense-location" placeholder="地點 (如: 餐廳)" class="w-1/2 p-1.5 bg-white border border-amber-300 rounded focus:ring-2 focus:ring-amber-700 outline-none">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Anger Metrics & Swear Assessment -->
+            <div class="mb-4 border-2 border-amber-800/30 rounded-lg overflow-hidden bg-white">
+                <div class="bg-amber-900 text-amber-50 p-2 font-bold flex justify-between items-center text-xs md:text-sm">
+                    <span><i class="fa-solid fa-chart-bar mr-1"></i><span id="sec2-title">學術Assessment - 嬲怒等級評定</span></span>
+                    <span class="text-[11px] font-normal" id="sec2-subtitle">等級越高的事，越要牢記</span>
+                </div>
+
+                <div class="p-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Slider for Anger Level -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="font-bold text-amber-950 text-xs md:text-sm" id="lbl-anger-level">嬲的程度 (Anger Level):</label>
+                            <span id="anger-badge" class="px-2 py-0.5 rounded text-xs font-black bg-yellow-400 text-yellow-950">Level 50 - 氣到咬牙</span>
+                        </div>
+                        <input type="range" id="anger-slider" min="1" max="100" value="50" oninput="updateAngerDisplay(this.value)" class="w-full accent-red-700 cursor-pointer">
+                        
+                        <div class="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                            <span>微怒 (1)</span>
+                            <span>火山爆發 (100)</span>
+                        </div>
+
+                        <!-- Anger Grade Box -->
+                        <div class="mt-2 p-1.5 bg-amber-50 rounded border border-amber-200 text-center">
+                            <span class="text-[11px] text-amber-800 block" id="lbl-anger-grade-title">最終嬲怒成績評級：</span>
+                            <span id="anger-grade" class="text-2xl md:text-3xl font-black text-red-700 tracking-wider">GRADE C+</span>
+                        </div>
+                    </div>
+
+                    <!-- Swear Words Input -->
+                    <div>
+                        <label class="block font-bold text-amber-950 text-xs md:text-sm mb-1" id="lbl-swear">最想用的粗口/形容詞 (Expletive Description):</label>
+                        <textarea id="swear-input" rows="2" placeholder="例如：頂你個肺、正一仆街、離撚曬罩、簡直離譜！" class="w-full p-2 bg-amber-50/50 border border-amber-300 rounded focus:ring-2 focus:ring-amber-700 outline-none text-xs md:text-sm"></textarea>
+                        
+                        <!-- Quick Swear Chips -->
+                        <div class="flex flex-wrap gap-1 mt-1.5 no-print">
+                            <span class="text-[10px] text-gray-500 self-center" id="lbl-quick-tags">快速填入：</span>
+                            <button type="button" onclick="addSwearTag('頂你個肺！')" class="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">頂你個肺</button>
+                            <button type="button" onclick="addSwearTag('離撚曬罩！')" class="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">離撚曬罩</button>
+                            <button type="button" onclick="addSwearTag('智商過低！')" class="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">智商過低</button>
+                            <button type="button" onclick="addSwearTag('正一仆街！')" class="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">正一仆街</button>
+                            <button type="button" onclick="addSwearTag('打你小人！')" class="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">打你小人</button>
+                            <button type="button" onclick="addSwearTag('個腦跌左！')" class="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300">個腦跌左</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Incident Details -->
+            <div class="mb-4">
+                <label class="block font-bold text-amber-950 text-xs md:text-sm mb-1" id="lbl-story"><i class="fa-solid fa-pen-nib text-amber-800 mr-1"></i>導師評語 / 發生經過 (Incident Details):</label>
+                <textarea id="story-input" rows="3" placeholder="請詳細記錄該名主角如何得罪你...（例：約好7點結果8點半先到，句對不起都無講，仲喺度玩手機！）" class="w-full p-2.5 bg-white border-2 border-amber-800/30 rounded-lg focus:ring-2 focus:ring-amber-700 outline-none text-xs md:text-sm leading-relaxed"></textarea>
+            </div>
+
+            <!-- Section 4: Offender Signature Receipt -->
+            <div class="p-3 md:p-4 bg-amber-100/70 rounded-lg border-2 border-dashed border-amber-800/50 mb-4">
+                <div class="flex items-center justify-between mb-1.5">
+                    <h3 class="font-black text-amber-950 text-sm md:text-base" id="receipt-title"><i class="fa-solid fa-file-signature text-red-800 mr-1"></i>事主簽收回條 (ACKNOWLEDGEMENT RECEIPT)</h3>
+                    <span class="text-[10px] bg-red-100 text-red-800 border border-red-300 px-1.5 py-0.5 rounded font-bold" id="receipt-badge">須由事主親自簽名</span>
+                </div>
+                
+                <p class="text-[11px] text-amber-900 mb-2" id="receipt-desc">本人（即上述主角）已詳閱以上記仇紀錄，深感愧疚，並承諾完成以下條款：</p>
+
+                <!-- Checkbox Promises -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs mb-3 font-semibold text-amber-900">
+                    <!-- Mandatory 1 -->
+                    <label class="flex items-center gap-1.5 cursor-not-allowed bg-amber-200/50 p-1.5 rounded border border-amber-300 text-[11px]">
+                        <input type="checkbox" id="chk-1-input" checked disabled class="accent-amber-900 w-3.5 h-3.5 cursor-not-allowed">
+                        <span id="chk-1" class="font-bold">承認以上得罪事實無誤 (必須)</span>
+                    </label>
+                    <!-- Mandatory 2 -->
+                    <label class="flex items-center gap-1.5 cursor-not-allowed bg-amber-200/50 p-1.5 rounded border border-amber-300 text-[11px]">
+                        <input type="checkbox" id="chk-2-input" checked disabled class="accent-amber-900 w-3.5 h-3.5 cursor-not-allowed">
+                        <span id="chk-2" class="font-bold">保證短時間內不重犯 (必須)</span>
+                    </label>
+                    <!-- Option 3 -->
+                    <label class="flex items-center gap-1.5 cursor-pointer bg-white/70 p-1.5 rounded border border-amber-300 hover:bg-white transition text-[11px]">
+                        <input type="checkbox" id="chk-3-input" class="accent-amber-800 w-3.5 h-3.5">
+                        <span id="chk-3">承諾買珍珠奶茶賠罪</span>
+                    </label>
+                    <!-- Option 4 -->
+                    <label class="flex items-center gap-1.5 cursor-pointer bg-white/70 p-1.5 rounded border border-amber-300 hover:bg-white transition text-[11px]">
+                        <input type="checkbox" id="chk-4-input" class="accent-amber-800 w-3.5 h-3.5">
+                        <span id="chk-4">請我食大餐</span>
+                    </label>
+                    <!-- Option 5 -->
+                    <label class="flex items-center gap-1.5 cursor-pointer bg-white/70 p-1.5 rounded border border-amber-300 hover:bg-white transition text-[11px]">
+                        <input type="checkbox" id="chk-5-input" class="accent-amber-800 w-3.5 h-3.5">
+                        <span id="chk-5">Shopping 你找數</span>
+                    </label>
+                    <!-- Option 6 -->
+                    <label class="flex items-center gap-1.5 cursor-pointer bg-white/70 p-1.5 rounded border border-amber-300 hover:bg-white transition text-[11px]">
+                        <input type="checkbox" id="chk-6-input" class="accent-amber-800 w-3.5 h-3.5">
+                        <span id="chk-6">發達要養我</span>
+                    </label>
+                </div>
+
+                <!-- Signature Pad -->
+                <div class="flex flex-col sm:flex-row gap-3 items-end">
+                    <div class="w-full sm:w-2/3">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-amber-950" id="lbl-sign-canvas">事主簽署區 (Draw Signature):</span>
+                            <button type="button" onclick="clearSignature()" class="text-[11px] text-red-700 underline hover:text-red-900 no-print" id="btn-clear-sign">清除重簽</button>
+                        </div>
+                        <canvas id="sig-canvas" width="400" height="90" class="w-full h-20 bg-white border border-amber-400 rounded cursor-crosshair touch-none"></canvas>
+                    </div>
+
+                    <div class="w-full sm:w-1/3 flex flex-col justify-end text-xs text-amber-900 gap-1 border-t sm:border-t-0 sm:border-l border-amber-300 pt-2 sm:pt-0 sm:pl-3">
+                        <div><strong id="lbl-sign-date">簽收日期:</strong> <span id="sign-current-date">YYYY-MM-DD</span></div>
+                        <div><strong id="lbl-principal">小氣簿校長印章:</strong></div>
+                        <div class="stamp stamp-red text-center py-0.5 mt-0.5 font-bold text-xs" id="stamp-seal">
+                            小氣神君印
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+
+        <!-- Footer Action Buttons -->
+        <div class="mt-4 flex flex-wrap justify-center gap-3 no-print pt-3 border-t border-amber-200">
+            <button onclick="exportToPDF()" class="bg-amber-900 hover:bg-amber-950 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center gap-2 transition transform hover:-translate-y-0.5 text-xs md:text-sm">
+                <i class="fa-solid fa-file-pdf text-red-400"></i> <span id="btn-pdf-text">儲存為 PDF 成績表 (單頁)</span>
+            </button>
+
+            <button onclick="shareToWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center gap-2 transition transform hover:-translate-y-0.5 text-xs md:text-sm">
+                <i class="fa-brands fa-whatsapp text-lg"></i> <span id="btn-wa-text">WhatsApp 傳送事主 (連 PDF)</span>
+            </button>
+
+            <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-3 rounded-lg shadow-md flex items-center gap-2 transition text-xs md:text-sm">
+                <i class="fa-solid fa-print"></i> <span id="btn-print-text">列印</span>
+            </button>
+
+            <button onclick="resetForm()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold py-2 px-3 rounded-lg border border-amber-400 flex items-center gap-2 transition text-xs md:text-sm">
+                <i class="fa-solid fa-rotate"></i> <span id="btn-reset-text">重置紀錄</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- De-stress / Emotional Value Modal -->
+    <div id="vent-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden no-print">
+        <div class="bg-amber-50 max-w-md w-full rounded-2xl p-6 border-4 border-amber-800 shadow-2xl relative text-center">
+            
+            <button onclick="closeVentModal()" class="absolute top-3 right-3 text-gray-500 hover:text-black text-xl w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <h3 class="text-2xl font-black text-amber-950 mb-1" id="vent-modal-title">🧘 即時降火．情緒緩和站</h3>
+            <p class="text-xs text-amber-800 mb-4" id="vent-modal-subtitle">生氣容易傷身，先在這裡發洩與冷靜一下吧！</p>
+
+            <!-- Tabs for Relief Tools -->
+            <div class="flex border-b border-amber-300 mb-4 text-sm font-bold">
+                <button onclick="switchVentTab('fish')" id="tab-fish" class="flex-1 py-2 border-b-2 border-amber-800 text-amber-900">敲木魚降火</button>
+                <button onclick="switchVentTab('breath')" id="tab-breath" class="flex-1 py-2 text-gray-500">深呼吸導引</button>
+            </div>
+
+            <!-- Tab 1: Wooden Fish -->
+            <div id="vent-fish-zone" class="relative py-4 flex flex-col items-center">
+                <div id="floating-container" class="absolute inset-0 pointer-events-none"></div>
+
+                <!-- Wooden Fish Graphic -->
+                <button onclick="tapWoodenFish(event)" class="w-32 h-32 bg-amber-800 hover:bg-amber-900 active:scale-95 text-amber-200 rounded-full flex flex-col items-center justify-center shadow-lg border-4 border-amber-950 transition cursor-pointer select-none">
+                    <i class="fa-solid fa-fish text-4xl mb-1"></i>
+                    <span class="text-xs font-bold" id="lbl-tap-me">敲擊叩木魚</span>
+                </button>
+
+                <div class="mt-4 text-sm font-bold text-amber-900">
+                    <span id="lbl-merit-count">消氣值：</span><span id="merit-counter" class="text-xl text-red-700 font-black">0</span>
+                </div>
+            </div>
+
+            <!-- Tab 2: Deep Breathing -->
+            <div id="vent-breath-zone" class="hidden py-6 flex flex-col items-center">
+                <div class="w-32 h-32 rounded-full breath-circle flex items-center justify-center border-4 border-amber-400 shadow-inner mb-4">
+                    <span id="breath-text" class="font-extrabold text-amber-950 text-base">吸氣...</span>
+                </div>
+                <p class="text-xs text-amber-800 max-w-xs" id="breath-guide-text">跟隨圓圈大小進行深呼吸。吸氣 4 秒，呼氣 4 秒，讓憤怒隨氣流排出。</p>
+            </div>
+
+            <button onclick="closeVentModal()" class="mt-4 w-full bg-amber-800 hover:bg-amber-900 text-white font-bold py-2 rounded-lg text-sm">
+                <span id="btn-vent-done">心境平靜，返回填寫紀錄</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Curse & Comfort Pop-up Modal -->
+    <div id="curse-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden no-print">
+        <div class="bg-gradient-to-b from-red-950 to-stone-900 text-amber-100 max-w-md w-full rounded-2xl p-6 border-4 border-red-600 shadow-2xl relative text-center transform transition-all animate-bounce-short">
+            <div class="w-16 h-16 bg-red-900/80 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-red-500 text-3xl shadow-lg">
+                🕯️
+            </div>
+            <h3 class="text-xl font-black text-red-400 mb-1 tracking-wider" id="curse-modal-title">⚡ 小氣校長霸氣支援 ⚡</h3>
+            <p class="text-xs text-amber-200/80 mb-4">系統已為你執行最高級別情義相助：</p>
+            
+            <div class="bg-black/60 border-2 border-red-700/60 rounded-xl p-4 mb-5 shadow-inner">
+                <p id="curse-text" class="text-lg md:text-xl font-black text-yellow-300 leading-snug tracking-wide handwritten"></p>
+            </div>
+
+            <button onclick="closeCurseModal()" class="w-full bg-red-700 hover:bg-red-800 text-white font-extrabold py-2.5 px-4 rounded-xl shadow-lg border border-red-500 transition active:scale-95 text-sm">
+                <i class="fa-solid fa-fire-flame-curved mr-1"></i> 收到！繼續執行操作
+            </button>
+        </div>
+    </div>
+
+    <!-- Custom Reset Confirm Modal -->
+    <div id="reset-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden no-print">
+        <div class="bg-amber-50 max-w-sm w-full rounded-xl p-5 border-4 border-amber-800 shadow-2xl text-center">
+            <h3 class="text-lg font-black text-amber-950 mb-2">確定要重置所有紀錄？</h3>
+            <p class="text-xs text-amber-800 mb-4">重置後所有已填寫的得罪細節與簽名將會清除。</p>
+            <div class="flex gap-2">
+                <button onclick="confirmReset()" class="flex-1 bg-red-700 hover:bg-red-800 text-white font-bold py-2 rounded text-sm">確定重置</button>
+                <button onclick="closeResetModal()" class="flex-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold py-2 rounded text-sm">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Web Guidance Modal -->
+    <div id="wa-guide-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden no-print">
+        <div class="bg-amber-50 max-w-md w-full rounded-2xl p-5 border-4 border-amber-800 shadow-2xl text-center relative">
+            <div class="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto mb-2 text-2xl shadow">
+                <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <h3 class="text-lg font-black text-amber-950 mb-1">WhatsApp 準備傳送中！</h3>
+            <p class="text-xs text-amber-800 mb-3">（因網頁安全機制，電腦版需手動將 PDF 拉入 WhatsApp 視窗）</p>
+
+            <div class="bg-white/80 border border-amber-300 rounded-lg p-3 text-left text-xs space-y-2 mb-4 text-amber-900 font-semibold">
+                <div class="flex items-center gap-2">
+                    <span class="bg-amber-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shrink-0">1</span>
+                    <span>📄 <strong>PDF 成績表</strong>已自動下載至你的電腦／下載資料夾。</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="bg-amber-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shrink-0">2</span>
+                    <span>📋 <strong>成績表文字重點</strong>已自動複製到剪貼簿。</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="bg-amber-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shrink-0">3</span>
+                    <span>💬 在開啟的 WhatsApp Web 貼上文字，並將 PDF **拖放進對話框** 或點選 **夾附文件 (📎)** 即可！</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button id="wa-direct-btn" onclick="openWhatsAppWebDirectly()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-lg shadow flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-brands fa-whatsapp"></i> 打開 WhatsApp Web 進行傳送
+                </button>
+                <button onclick="closeWAGuideModal()" class="w-full bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold py-1.5 rounded-lg text-xs">
+                    完成／關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let soundEnabled = true;
+        let currentLang = 'zh'; // 'zh' or 'en'
+        let meritCount = 0;
+        let audioCtx = null;
+        let pendingAction = null;
+
+        // Sound synthesizer using Web Audio API
+        function playTone(freq, duration = 0.1, type = 'sine') {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {
+                console.error("Audio playback error:", e);
+            }
+        }
+
+        // Translation Dictionary
+        const translations = {
+            zh: {
+                navTitle: "小氣簿幼紀錄專頁",
+                btnVent: "即時降火區",
+                btnSoundOn: "音效: 開",
+                btnSoundOff: "音效: 關",
+                schoolTitle: "皇家記仇小學",
+                schoolSubtitle: "ROYAL PETTY ELEMENTARY SCHOOL - OFFENSE REPORT CARD",
+                labelTerm: "學期：第一學期 (得罪紀錄)",
+                labelClass: "班別：小氣極致班",
+                btnUploadPhoto: "上載相片",
+                avatarHint: "可上載得罪者相片",
+                lblReporter: "填表人英文名 (轉換檔案編號):",
+                lblOffender: "主角 (得罪者姓名):",
+                lblRelation: "關係:",
+                lblDate: "日期:",
+                lblTime: "時間 & 地點:",
+                sec2Title: "學術Assessment - 嬲怒等級評定",
+                sec2Subtitle: "等級越高的事，越要牢記",
+                lblAngerLevel: "嬲的程度 (Anger Level):",
+                lblAngerGradeTitle: "最終嬲怒成績評級：",
+                lblSwear: "最想用的粗口/形容詞 (Expletive Description):",
+                lblQuickTags: "快速填入：",
+                lblStory: "導師評語 / 發生經過 (Incident Details):",
+                receiptTitle: "事主簽收回條 (ACKNOWLEDGEMENT RECEIPT)",
+                receiptBadge: "須由事主親自簽名",
+                receiptDesc: "本人（即上述主角）已詳閱以上記仇紀錄，深感愧疚，並承諾完成以下條款：",
+                chk1: "承認以上得罪事實無誤 (必須)",
+                chk2: "保證短時間內不重犯 (必須)",
+                chk3: "承諾買珍珠奶茶賠罪",
+                chk4: "請我食大餐",
+                chk5: "Shopping 你找數",
+                chk6: "發達要養我",
+                lblSignCanvas: "事主簽署區 (Draw Signature):",
+                btnClearSign: "清除重簽",
+                lblSignDate: "簽收日期:",
+                lblPrincipal: "小氣簿校長印章:",
+                stampSeal: "小氣神君印",
+                stampMain: "大過處分",
+                stampSub: "記仇檔案存檔",
+                btnPdf: "儲存為 PDF 成績表 (單頁)",
+                btnWa: "WhatsApp 傳送事主 (連 PDF)",
+                btnPrint: "列印",
+                btnReset: "重置紀錄",
+                ventTitle: "🧘 即時降火．情緒緩和站",
+                ventSubtitle: "生氣容易傷身，先在這裡發洩與冷靜一下吧！",
+                lblTapMe: "敲擊叩木魚",
+                lblMeritCount: "消氣值：",
+                breathGuide: "跟隨圓圈大小進行深呼吸。吸氣 4 秒，呼氣 4 秒，讓憤怒隨氣流排出。",
+                btnVentDone: "心境平靜，返回填寫紀錄"
+            },
+            en: {
+                navTitle: "Petty Grudge Log Page",
+                btnVent: "Venting Zone",
+                btnSoundOn: "Sound: On",
+                btnSoundOff: "Sound: Off",
+                schoolTitle: "Royal Petty Elementary School",
+                schoolSubtitle: "ROYAL PETTY ELEMENTARY SCHOOL - OFFENSE REPORT CARD",
+                labelTerm: "Term: 1st Term (Offense Record)",
+                labelClass: "Class: Peak Petty Class",
+                btnUploadPhoto: "Upload Photo",
+                avatarHint: "Upload Offender's Photo",
+                lblReporter: "Reporter English Name (Doc ID Cipher):",
+                lblOffender: "Offender's Name:",
+                lblRelation: "Relationship:",
+                lblDate: "Date:",
+                lblTime: "Time & Location:",
+                sec2Title: "Academic Assessment - Anger Level",
+                sec2Subtitle: "The higher the severity, the longer remembered",
+                lblAngerLevel: "Anger Level:",
+                lblAngerGradeTitle: "Final Anger Grade:",
+                lblSwear: "Expletive / Description:",
+                lblQuickTags: "Quick Tags:",
+                lblStory: "Teacher Comments / Incident Details:",
+                receiptTitle: "ACKNOWLEDGEMENT RECEIPT",
+                receiptBadge: "Signature Required",
+                receiptDesc: "I (the offender named above) have reviewed the record, feel deeply guilty, and agree to the terms below:",
+                chk1: "Acknowledge the above offense (Mandatory)",
+                chk2: "Guarantee not to repeat in short term (Mandatory)",
+                chk3: "Promise to buy Bubble Tea as apology",
+                chk4: "Treat me to a lavish meal",
+                chk5: "Pay for my shopping spree",
+                chk6: "Support me financially if you get rich",
+                lblSignCanvas: "Offender Signature Area:",
+                btnClearSign: "Clear & Resign",
+                lblSignDate: "Sign Date:",
+                lblPrincipal: "Principal Stamp:",
+                stampSeal: "Petty God Seal",
+                stampMain: "MAJOR DEMERIT",
+                stampSub: "Grudge File Archived",
+                btnPdf: "Save PDF (Single Page)",
+                btnWa: "Send via WhatsApp (with PDF)",
+                btnPrint: "Print",
+                btnReset: "Reset Form",
+                ventTitle: "🧘 De-stress & Cool Down Zone",
+                ventSubtitle: "Anger hurts your body, vent and calm down here first!",
+                lblTapMe: "Tap Wooden Fish",
+                lblMeritCount: "Zen Points: ",
+                breathGuide: "Follow the circle to take deep breaths. Inhale 4s, exhale 4s to release anger.",
+                btnVentDone: "Calmed Down, Return to Form"
+            }
+        };
+
+        // Custom Curse / Reassurance Sentences
+        const cursePhrases = [
+            "我已經幫你咀咒佢20次！🕯️",
+            "我依家即刻幫你屌柒佢！🤬",
+            "我依家幫你打柒佢！👊",
+            "我即刻幫你打佢小人！👞",
+            "信我…佢唔會有好結果！🔮"
+        ];
+
+        function showCursePopup(callback) {
+            pendingAction = callback;
+            const randomPhrase = cursePhrases[Math.floor(Math.random() * cursePhrases.length)];
+            document.getElementById('curse-text').innerText = randomPhrase;
+            document.getElementById('curse-modal').classList.remove('hidden');
+            playTone(300, 0.25, 'sawtooth');
+        }
+
+        function closeCurseModal() {
+            document.getElementById('curse-modal').classList.add('hidden');
+            if (pendingAction) {
+                const action = pendingAction;
+                pendingAction = null;
+                action();
+            }
+        }
+
+        // Toggle Sound
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            const text = document.getElementById('btn-sound-text');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+                text.innerText = translations[currentLang].btnSoundOn;
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark';
+                text.innerText = translations[currentLang].btnSoundOff;
+            }
+        }
+
+        // Toggle Language
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            const langBtnText = document.getElementById('lang-btn-text');
+            langBtnText.innerText = currentLang === 'zh' ? 'English' : '繁體中文';
+
+            const t = translations[currentLang];
+
+            // Update UI elements text
+            document.getElementById('nav-title').innerText = t.navTitle;
+            document.getElementById('btn-vent-text').innerText = t.btnVent;
+            document.getElementById('sound-btn').querySelector('span').innerText = soundEnabled ? t.btnSoundOn : t.btnSoundOff;
+            document.getElementById('school-title').innerText = t.schoolTitle;
+            document.getElementById('school-subtitle').innerText = t.schoolSubtitle;
+            document.getElementById('label-term').innerText = t.labelTerm;
+            document.getElementById('label-class').innerText = t.labelClass;
+            document.getElementById('btn-upload-photo').innerText = t.btnUploadPhoto;
+            document.getElementById('avatar-hint').innerText = t.avatarHint;
+            if (document.getElementById('lbl-reporter')) document.getElementById('lbl-reporter').innerText = t.lblReporter;
+            document.getElementById('lbl-offender').innerText = t.lblOffender;
+            document.getElementById('lbl-relation').innerText = t.lblRelation;
+            document.getElementById('lbl-date').innerText = t.lblDate;
+            document.getElementById('lbl-time').innerText = t.lblTime;
+            document.getElementById('sec2-title').innerText = t.sec2Title;
+            document.getElementById('sec2-subtitle').innerText = t.sec2Subtitle;
+            document.getElementById('lbl-anger-level').innerText = t.lblAngerLevel;
+            document.getElementById('lbl-anger-grade-title').innerText = t.lblAngerGradeTitle;
+            document.getElementById('lbl-swear').innerText = t.lblSwear;
+            document.getElementById('lbl-quick-tags').innerText = t.lblQuickTags;
+            document.getElementById('lbl-story').innerText = t.lblStory;
+            document.getElementById('receipt-title').innerText = t.receiptTitle;
+            document.getElementById('receipt-badge').innerText = t.receiptBadge;
+            document.getElementById('receipt-desc').innerText = t.receiptDesc;
+            document.getElementById('chk-1').innerText = t.chk1;
+            document.getElementById('chk-2').innerText = t.chk2;
+            document.getElementById('chk-3').innerText = t.chk3;
+            document.getElementById('chk-4').innerText = t.chk4;
+            document.getElementById('chk-5').innerText = t.chk5;
+            document.getElementById('chk-6').innerText = t.chk6;
+            document.getElementById('lbl-sign-canvas').innerText = t.lblSignCanvas;
+            document.getElementById('btn-clear-sign').innerText = t.btnClearSign;
+            document.getElementById('lbl-sign-date').innerText = t.lblSignDate;
+            document.getElementById('lbl-principal').innerText = t.lblPrincipal;
+            document.getElementById('stamp-seal').innerText = t.stampSeal;
+            document.getElementById('stamp-main-text').innerText = t.stampMain;
+            document.getElementById('stamp-sub-text').innerText = t.stampSub;
+            document.getElementById('btn-pdf-text').innerText = t.btnPdf;
+            document.getElementById('btn-wa-text').innerText = t.btnWa;
+            document.getElementById('btn-print-text').innerText = t.btnPrint;
+            document.getElementById('btn-reset-text').innerText = t.btnReset;
+            document.getElementById('vent-modal-title').innerText = t.ventTitle;
+            document.getElementById('vent-modal-subtitle').innerText = t.ventSubtitle;
+            document.getElementById('lbl-tap-me').innerText = t.lblTapMe;
+            document.getElementById('lbl-merit-count').innerText = t.lblMeritCount;
+            document.getElementById('breath-guide-text').innerText = t.breathGuide;
+            document.getElementById('btn-vent-done').innerText = t.btnVentDone;
+
+            // Update anger level text
+            const sliderVal = document.getElementById('anger-slider').value;
+            updateAngerDisplay(sliderVal);
+            updateReporterDetails();
+        }
+
+        // Convert English Name to Numbers (a=1, b=2, ..., z=26) and update Seal
+        function updateReporterDetails() {
+            const rawName = document.getElementById('reporter-name').value.trim();
+            const stampSeal = document.getElementById('stamp-seal');
+            const docId = document.getElementById('doc-id');
+
+            if (!rawName) {
+                docId.innerText = "9999";
+                stampSeal.innerText = translations[currentLang].stampSeal;
+                return;
+            }
+
+            // Convert English letters to corresponding A1Z26 numbers
+            let numStr = "";
+            const lower = rawName.toLowerCase();
+            for (let i = 0; i < lower.length; i++) {
+                const code = lower.charCodeAt(i);
+                if (code >= 97 && code <= 122) { // a-z
+                    numStr += (code - 96).toString();
+                }
+            }
+
+            docId.innerText = numStr || "0000";
+            stampSeal.innerText = `${rawName} 本尊`;
+        }
+
+        // Update Anger Display & Grade
+        function updateAngerDisplay(val) {
+            const badge = document.getElementById('anger-badge');
+            const grade = document.getElementById('anger-grade');
+
+            let gradeText = "";
+            let badgeText = "";
+            let colorClass = "";
+
+            if (val < 20) {
+                badgeText = `Level ${val} - 白眼微怒 😒`;
+                gradeText = "GRADE D (尚可忍受)";
+                colorClass = "bg-green-200 text-green-950";
+            } else if (val < 50) {
+                badgeText = `Level ${val} - 氣到咬牙 😤`;
+                gradeText = "GRADE C (開始記仇)";
+                colorClass = "bg-yellow-300 text-yellow-950";
+            } else if (val < 80) {
+                badgeText = `Level ${val} - 怒火中燒 🤬`;
+                gradeText = "GRADE B (極度憤怒)";
+                colorClass = "bg-orange-400 text-amber-950";
+            } else {
+                badgeText = `Level ${val} - 火山爆發 🌋🔥`;
+                gradeText = "GRADE SSS (罪無可赦)";
+                colorClass = "bg-red-600 text-white font-extrabold";
+            }
+
+            badge.className = `px-2 py-0.5 rounded text-xs font-black ${colorClass}`;
+            badge.innerText = badgeText;
+            grade.innerText = gradeText;
+        }
+
+        // Quick Swear Tag Add
+        function addSwearTag(text) {
+            const input = document.getElementById('swear-input');
+            if (input.value) {
+                input.value += " " + text;
+            } else {
+                input.value = text;
+            }
+            playTone(440, 0.1, 'square');
+        }
+
+        // Avatar Image Upload
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('avatar-preview').src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Signature Canvas Logic
+        let canvas, ctx;
+        let isSigning = false;
+
+        function initSignaturePad() {
+            canvas = document.getElementById('sig-canvas');
+            ctx = canvas.getContext('2d');
+            
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = "round";
+
+            // Mouse Events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseleave', stopDrawing);
+
+            // Touch Events
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+
+            canvas.addEventListener('touchend', (e) => {
+                const mouseEvent = new MouseEvent('mouseup', {});
+                canvas.dispatchEvent(mouseEvent);
+            });
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            isSigning = true;
+            const coords = getCanvasCoords(e);
+            ctx.beginPath();
+            ctx.moveTo(coords.x, coords.y);
+            playTone(600, 0.05, 'sine');
+        }
+
+        function draw(e) {
+            if (!isSigning) return;
+            const coords = getCanvasCoords(e);
+            ctx.lineTo(coords.x, coords.y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            if (isSigning) {
+                isSigning = false;
+                ctx.closePath();
+            }
+        }
+
+        // Clear signature canvas
+        function clearSignature() {
+            if (ctx && canvas) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // Helper to check if canvas is blank
+        function isCanvasBlank(c) {
+            if (!c) return true;
+            const blank = document.createElement('canvas');
+            blank.width = c.width;
+            blank.height = c.height;
+            return c.toDataURL() === blank.toDataURL();
+        }
+
+        // Export to PDF - Strict Single Page Fit
+        function exportToPDF() {
+            showCursePopup(() => {
+                playTone(700, 0.2);
+
+                const origScrollY = window.scrollY;
+                window.scrollTo(0, 0);
+
+                const element = document.getElementById('report-card-container');
+                element.classList.add('pdf-single-page');
+
+                const opt = {
+                    margin:       [0.15, 0.15, 0.15, 0.15],
+                    filename:     'Petty_Grudge_Report_Card.pdf',
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true,
+                        scrollY: 0,
+                        scrollX: 0,
+                        windowWidth: 800
+                    },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: 'avoid-all' }
+                };
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    element.classList.remove('pdf-single-page');
+                    window.scrollTo(0, origScrollY);
+                }).catch(err => {
+                    console.error('PDF Export Error:', err);
+                    element.classList.remove('pdf-single-page');
+                    window.scrollTo(0, origScrollY);
+                });
+            });
+        }
+
+        // Share via WhatsApp with PDF File Integration
+        let currentWAMsg = "";
+
+        function shareToWhatsApp() {
+            showCursePopup(async () => {
+                playTone(659, 0.2);
+
+                const name = document.getElementById('offender-name').value || '得罪者';
+                const relation = document.getElementById('offender-relation').value;
+                const date = document.getElementById('offense-date').value;
+                const time = document.getElementById('offense-time').value;
+                const location = document.getElementById('offense-location').value;
+                const angerText = document.getElementById('anger-badge').innerText;
+                const grade = document.getElementById('anger-grade').innerText;
+                const swear = document.getElementById('swear-input').value || '無說明';
+                const story = document.getElementById('story-input').value || '無說明';
+
+                // Collect agreement terms
+                const agreedPromises = [];
+                for (let i = 1; i <= 6; i++) {
+                    const chk = document.getElementById(`chk-${i}-input`);
+                    const label = document.getElementById(`chk-${i}`).innerText;
+                    if (chk && chk.checked) {
+                        agreedPromises.push(`  ☑️ ${label}`);
+                    }
+                }
+
+                // Check signature status
+                const hasSigned = !isCanvasBlank(canvas);
+                const signStatus = hasSigned ? "✅ 已在成績表上親自簽署" : "⚠️ 未簽署 (請開啟成績表補簽)";
+
+                const plainMsg = `*【皇家小氣紀錄簿 - 得罪成績表及事主簽收回條】*\n\n` +
+                    `致主角：*${name}* (${relation})\n` +
+                    `📅 得罪日期：${date} ${time}\n` +
+                    `📍 發生地點：${location || '未標明'}\n` +
+                    `🔥 怒火等級：${angerText}\n` +
+                    `📊 成績評級：*${grade}*\n\n` +
+                    `📝 *得罪經過：*\n${story}\n\n` +
+                    `🤬 *最想送你的評語：*\n${swear}\n\n` +
+                    `📜 *【事主簽收回條與條款】*\n` +
+                    `✍️ 簽名簽收：${signStatus}\n` +
+                    `📋 承諾賠罪條款：\n${agreedPromises.join('\n')}\n\n` +
+                    `👉 *請參閱附件 PDF 成績表，並儘快履行條款賠罪！*`;
+
+                currentWAMsg = plainMsg;
+
+                // Copy text to clipboard as fallback
+                try {
+                    const dummy = document.createElement("textarea");
+                    document.body.appendChild(dummy);
+                    dummy.value = plainMsg;
+                    dummy.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(dummy);
+                } catch(err) {
+                    console.log("Copy failed", err);
+                }
+
+                // Prepare element styling for PDF rendering
+                const origScrollY = window.scrollY;
+                window.scrollTo(0, 0);
+                const element = document.getElementById('report-card-container');
+                element.classList.add('pdf-single-page');
+
+                const fileName = `Petty_Grudge_${name.replace(/\s+/g, '_')}.pdf`;
+                const opt = {
+                    margin:       [0.15, 0.15, 0.15, 0.15],
+                    filename:     fileName,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0, windowWidth: 800 },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: 'avoid-all' }
+                };
+
+                try {
+                    // Generate PDF Blob
+                    const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+                    element.classList.remove('pdf-single-page');
+                    window.scrollTo(0, origScrollY);
+
+                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                    // 1. Mobile Web Share API (Passes PDF file + text directly to WhatsApp on mobile browsers)
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: '皇家小氣紀錄簿 - 得罪成績表',
+                            text: plainMsg,
+                            files: [file]
+                        });
+                        return;
+                    }
+                } catch (e) {
+                    console.log("Web Share API fallback:", e);
+                    element.classList.remove('pdf-single-page');
+                    window.scrollTo(0, origScrollY);
+                }
+
+                // 2. Desktop WhatsApp Web Flow: Auto Download PDF + Show Helper Modal
+                element.classList.add('pdf-single-page');
+                html2pdf().set(opt).from(element).save().then(() => {
+                    element.classList.remove('pdf-single-page');
+                }).catch(() => {
+                    element.classList.remove('pdf-single-page');
+                });
+
+                // Show modal with clear instructions and direct button for WhatsApp Web
+                document.getElementById('wa-guide-modal').classList.remove('hidden');
+            });
+        }
+
+        function openWhatsAppWebDirectly() {
+            const encodedMsg = encodeURIComponent(currentWAMsg);
+            const waUrl = `https://web.whatsapp.com/send?text=${encodedMsg}`;
+            window.open(waUrl, '_blank');
+            closeWAGuideModal();
+        }
+
+        function closeWAGuideModal() {
+            document.getElementById('wa-guide-modal').classList.add('hidden');
+        }
+
+        // Reset Form with Custom Modal
+        function resetForm() {
+            document.getElementById('reset-modal').classList.remove('hidden');
+        }
+
+        function confirmReset() {
+            document.getElementById('grudge-form').reset();
+            clearSignature();
+            document.getElementById('avatar-preview').src = "https://placehold.co/120x120/e2e8f0/475569?text=罪人頭像";
+            updateAngerDisplay(50);
+            updateReporterDetails();
+            closeResetModal();
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').classList.add('hidden');
+        }
+
+        // De-stress Vent Modal Logic
+        function openVentModal() {
+            document.getElementById('vent-modal').classList.remove('hidden');
+            playTone(800, 0.1, 'triangle');
+        }
+
+        function closeVentModal() {
+            document.getElementById('vent-modal').classList.add('hidden');
+        }
+
+        function switchVentTab(tab) {
+            const fishZone = document.getElementById('vent-fish-zone');
+            const breathZone = document.getElementById('vent-breath-zone');
+            const tabFish = document.getElementById('tab-fish');
+            const tabBreath = document.getElementById('tab-breath');
+
+            if (tab === 'fish') {
+                fishZone.classList.remove('hidden');
+                breathZone.classList.add('hidden');
+                tabFish.className = "flex-1 py-2 border-b-2 border-amber-800 text-amber-900";
+                tabBreath.className = "flex-1 py-2 text-gray-500";
+            } else {
+                fishZone.classList.add('hidden');
+                breathZone.classList.remove('hidden');
+                tabBreath.className = "flex-1 py-2 border-b-2 border-amber-800 text-amber-900";
+                tabFish.className = "flex-1 py-2 text-gray-500";
+            }
+        }
+
+        // Tap Wooden Fish Effect
+        function tapWoodenFish(e) {
+            meritCount += 1;
+            document.getElementById('merit-counter').innerText = meritCount;
+
+            // Low resonance wooden fish knock sound simulation
+            playTone(220, 0.15, 'sine');
+
+            // Floating text animation
+            const container = document.getElementById('floating-container');
+            const floatingEl = document.createElement('div');
+            floatingEl.className = 'float-text';
+
+            const phrases = ["功德+1", "怒氣-100", "冷靜+1", "珍奶+1杯", "原諒+1%"];
+            const text = phrases[Math.floor(Math.random() * phrases.length)];
+            floatingEl.innerText = text;
+
+            // Position near center
+            floatingEl.style.left = (50 + (Math.random() * 20 - 10)) + '%';
+            floatingEl.style.top = '40%';
+
+            container.appendChild(floatingEl);
+
+            setTimeout(() => {
+                floatingEl.remove();
+            }, 1000);
+        }
+
+        // Breathing text indicator toggle
+        let breathState = 0;
+        setInterval(() => {
+            const breathText = document.getElementById('breath-text');
+            if (!breathText) return;
+
+            if (breathState === 0) {
+                breathText.innerText = currentLang === 'zh' ? "呼氣..." : "Exhale...";
+                breathState = 1;
+            } else {
+                breathText.innerText = currentLang === 'zh' ? "吸氣..." : "Inhale...";
+                breathState = 0;
+            }
+        }, 4000);
+
+        window.onload = function() {
+            initSignaturePad();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('offense-date').value = today;
+            document.getElementById('sign-current-date').innerText = today;
+            updateReporterDetails();
+        };
+    </script>
+</body>
+</html>
